@@ -1,73 +1,130 @@
-# BENDER - AI Assistant con Jira
+# Bender IA - Chatbot con Integración Jira
 
-Este proyecto es un chatbot inteligente inspirado en Bender de Futurama, desarrollado en Python (FastAPI) que se conecta a Ollama y Jira, ofreciendo una interfaz web minimalista y moderna para consultar información de tickets y proyectos.
+Un chatbot inteligente que integra con Jira y utiliza Ollama para procesamiento de lenguaje natural.
 
-## Requisitos
-- Podman (o Docker)
-- Acceso a un servidor Ollama en `http://192.168.10.14:11434`
-- Token de API de Jira (ya configurado)
+## 🚀 Despliegue Rápido
 
-## Funcionalidades
-
-### Chat con IA
-- Conversación normal con Llama 3
-- Análisis y explicación de información
-
-### Consultas Jira
-- **Ticket específico**: `"ticket PROJ-123"`
-- **Estado de ticket**: `"estado PROJ-123"`
-- **Asignado**: `"asignado PROJ-123"`
-- **Información de proyecto**: `"proyecto PROJ"`
-- **Búsqueda**: `"buscar bug en PROJ"`
-
-## Construcción y ejecución
-
-1. Construir la imagen:
-
-```sh
-podman build -t bender-ai .
+### Opción 1: Script Automático (Recomendado)
+```bash
+cd /home/javo/Documents/bot_guzdan
+./deploy.sh
 ```
 
-2. Ejecutar el contenedor:
+### Opción 2: Comandos Manuales
+```bash
+# Construir imagen
+podman build -t bender-ia:latest .
 
-```sh
-podman run -d -p 8000:8000 --name bender-ai bender-ai
+# Ejecutar contenedor con restart automático
+podman run -d \
+    --name bender-ia \
+    --restart unless-stopped \
+    -p 8000:8000 \
+    -e OLLAMA_URL=http://192.168.10.14:11434 \
+    -e MODEL_NAME=llama3 \
+    --health-cmd="curl -f http://localhost:8000/ || exit 1" \
+    --health-interval=30s \
+    --health-timeout=10s \
+    --health-retries=3 \
+    --health-start-period=40s \
+    --memory=1g \
+    bender-ia:latest
 ```
 
-3. Accede a la interfaz web:
+## 🔧 Gestión del Contenedor
 
-Abre tu navegador en [http://localhost:8000](http://localhost:8000)
+### Comandos Útiles
+```bash
+# Ver logs en tiempo real
+podman logs -f bender-ia
 
-## Personalización
+# Ver estado del contenedor
+podman ps
 
-- **URL de Ollama**: Cambia la variable de entorno `OLLAMA_URL`:
-```sh
-podman run -d -p 8000:8000 -e OLLAMA_URL="http://TU_IP:11434" --name bender-ai bender-ai
+# Reiniciar contenedor
+podman restart bender-ia
+
+# Detener contenedor
+podman stop bender-ia
+
+# Eliminar contenedor
+podman rm -f bender-ia
 ```
 
-- **Modelo específico**: Cambia la variable de entorno `MODEL_NAME`:
-```sh
-podman run -d -p 8000:8000 -e MODEL_NAME="llama3:8b" --name bender-ai bender-ai
+## 🛠️ Solución de Problemas
+
+### Error: "Refreshing container... acquiring lock"
+Este error indica que hay un contenedor anterior que no se cerró correctamente.
+
+**Solución:**
+```bash
+# Limpiar contenedores antiguos
+podman rm -f bender-ia 2>/dev/null || true
+podman system prune -f
+
+# Reconstruir y ejecutar
+./deploy.sh
 ```
 
-- **Configuración Jira**: Modifica las variables de entorno:
-```sh
-podman run -d -p 8000:8000 \
-  -e JIRA_URL="https://tu-dominio.atlassian.net" \
-  -e JIRA_EMAIL="tu-email@dominio.com" \
-  -e JIRA_API_TOKEN="tu-token" \
-  --name bender-ai bender-ai
+### Error: Contenedor se cierra inesperadamente
+El contenedor ahora tiene configuración robusta con:
+- **Restart automático**: `--restart unless-stopped`
+- **Health checks**: Verificación cada 30 segundos
+- **Logging mejorado**: Logs rotativos
+- **Manejo de señales**: Shutdown elegante
+
+### Error: No se puede conectar a Ollama
+Verificar que Ollama esté ejecutándose en la IP correcta:
+```bash
+# Verificar conectividad
+curl http://192.168.10.14:11434/api/tags
+
+# Si no responde, actualizar la URL en el contenedor
+podman stop bender-ia
+podman run -d --name bender-ia --restart unless-stopped -p 8000:8000 \
+    -e OLLAMA_URL=http://NUEVA_IP:11434 \
+    -e MODEL_NAME=llama3 \
+    bender-ia:latest
 ```
 
-## Endpoints adicionales
+## 📊 Monitoreo
 
-- `GET /models` - Lista los modelos disponibles en Ollama
-- `POST /chat` - Envía mensajes al modelo configurado (con integración Jira)
+### Health Check
+El contenedor incluye health checks automáticos:
+- **Intervalo**: 30 segundos
+- **Timeout**: 10 segundos
+- **Reintentos**: 3
+- **Período inicial**: 40 segundos
 
-## Variables de entorno
+### Logs
+Los logs se rotan automáticamente:
+- **Tamaño máximo**: 10MB por archivo
+- **Archivos máximos**: 3 archivos
 
-- `OLLAMA_URL`: URL del servidor Ollama (default: `http://192.168.10.14:11434`)
-- `MODEL_NAME`: Nombre del modelo a usar (default: `llama3`)
-- `JIRA_URL`: URL de tu instancia de Jira
-- `JIRA_EMAIL`: Email de tu cuenta de Jira
-- `JIRA_API_TOKEN`: Token de API de Jira (ya configurado) 
+## 🔄 Reinicio Automático
+
+El contenedor se reiniciará automáticamente en los siguientes casos:
+- **Fallo de la aplicación**: Restart inmediato
+- **Reinicio del sistema**: Restart automático
+- **Error de health check**: Restart después de 3 fallos
+
+## 🌐 Acceso
+
+- **URL**: http://localhost:8000
+- **API Chat**: POST /chat
+- **API Models**: GET /models
+
+## 📝 Variables de Entorno
+
+| Variable | Valor por Defecto | Descripción |
+|----------|-------------------|-------------|
+| `OLLAMA_URL` | `http://192.168.10.14:11434` | URL del servidor Ollama |
+| `MODEL_NAME` | `llama3` | Modelo de lenguaje a usar |
+
+## 🏗️ Arquitectura
+
+- **Backend**: FastAPI con Python 3.11
+- **Frontend**: HTML/JavaScript estático
+- **IA**: Ollama con modelo Llama3
+- **Integración**: Jira API v3
+- **Contenedor**: Podman con configuración robusta 

@@ -8,10 +8,14 @@ echo "🚀 Iniciando Bender IA..."
 # Función para manejar señales de terminación
 cleanup() {
     echo "📴 Recibida señal de terminación, cerrando aplicación..."
-    # Enviar señal SIGTERM al proceso de uvicorn
+    # Enviar señal SIGTERM a todos los procesos
     if [ -n "$UVICORN_PID" ]; then
         kill -TERM "$UVICORN_PID" 2>/dev/null || true
         wait "$UVICORN_PID" 2>/dev/null || true
+    fi
+    if [ -n "$TELEGRAM_BOT_PID" ]; then
+        kill -TERM "$TELEGRAM_BOT_PID" 2>/dev/null || true
+        wait "$TELEGRAM_BOT_PID" 2>/dev/null || true
     fi
     echo "✅ Aplicación cerrada correctamente"
     exit 0
@@ -34,6 +38,11 @@ else
     echo "⚠️  Advertencia: No se puede conectar a Ollama, pero continuando..."
 fi
 
+# Iniciar el bot de Telegram en segundo plano
+echo "🤖 Iniciando bot de Telegram..."
+python telegram_bot.py &
+TELEGRAM_BOT_PID=$!
+
 # Iniciar la aplicación con uvicorn
 echo "🎯 Iniciando servidor uvicorn..."
 exec uvicorn main:app \
@@ -46,5 +55,5 @@ exec uvicorn main:app \
     --use-colors &
 UVICORN_PID=$!
 
-# Esperar a que el proceso termine
-wait $UVICORN_PID 
+# Esperar a que cualquiera de los procesos termine
+wait $UVICORN_PID $TELEGRAM_BOT_PID 

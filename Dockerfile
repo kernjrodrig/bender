@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código de la aplicación
 COPY . .
 
-# Hacer el script de inicio ejecutable
+# Hacer los scripts de inicio ejecutables
 RUN chmod +x start.sh
 
 # Crear usuario no-root para seguridad

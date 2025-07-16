@@ -6,7 +6,7 @@ Un chatbot inteligente que integra con Jira y utiliza Ollama para procesamiento 
 
 ### Opción 1: Script Automático (Recomendado)
 ```bash
-cd /home/javo/Documents/bot_guzdan
+cd /bender
 ./deploy.sh
 ```
 

@@ -3,13 +3,28 @@ import httpx
 from typing import Dict, List, Optional
 
 class JiraClient:
+    """
+    Cliente para interactuar con la API de Jira Cloud.
+
+    Permite obtener información de tickets, buscar issues usando JQL, obtener información de proyectos y formatear los resultados para su presentación.
+    """
+
     def __init__(self):
+        """
+        Inicializa el cliente Jira con los parámetros de autenticación y la URL base.
+        Los valores se obtienen de variables de entorno o se usan valores por defecto.
+        """
         self.base_url = os.getenv("JIRA_URL", "https://servicedeskguzdan.atlassian.net")
         self.api_token = os.getenv("JIRA_API_TOKEN", "ATATT3xFfGF0WYvVBIvD0E1vQjLC51Qm1LHbaC6zJLyIqC852CNFb3f4ojMGNCZ7I_fHzaPhKDqqWeI_P1YYWbDYwYFMHNk9G0s6rLlDQrUqmCRpPalxvI4r0xfMG9qd2kMJ38054bKW92WiKwfPjrjBfSig1ctLcihTlbBWaSqSJdx_kCtThZY=5BEA5AC6")
         self.email = os.getenv("JIRA_EMAIL", "javier.rodriguez@guzdan.com")
         
     def _get_headers(self) -> Dict[str, str]:
-        """Genera headers para autenticación con Jira"""
+        """
+        Genera los headers necesarios para la autenticación básica con la API de Jira.
+
+        Returns:
+            dict: Headers con autorización y tipo de contenido.
+        """
         import base64
         credentials = f"{self.email}:{self.api_token}"
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
@@ -19,15 +34,27 @@ class JiraClient:
             "Accept": "application/json"
         }
     
-    async def get_issue(self, issue_key: str) -> Optional[Dict]:
-        """Obtiene información de un ticket específico"""
+    async def get_issue(self, issue_key: str, expand: Optional[str] = None) -> Optional[Dict]:
+        """
+        Obtiene información detallada de un ticket específico de Jira.
+
+        Args:
+            issue_key (str): Clave del ticket (por ejemplo, 'PROJ-123').
+            expand (str, opcional): Parámetro para expandir campos adicionales.
+
+        Returns:
+            dict o None: Información del ticket o None si hay error.
+        """
         try:
             print(f"DEBUG: Consultando Jira para issue: {issue_key}")
-            print(f"DEBUG: URL: {self.base_url}/rest/api/3/issue/{issue_key}")
+            url = f"{self.base_url}/rest/api/3/issue/{issue_key}"
+            if expand:
+                url += f"?expand={expand}"
+            print(f"DEBUG: URL: {url}")
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{self.base_url}/rest/api/3/issue/{issue_key}",
+                    url,
                     headers=self._get_headers(),
                     timeout=30.0
                 )
@@ -47,7 +74,16 @@ class JiraClient:
             return None
     
     async def search_issues(self, jql: str, max_results: int = 50) -> Optional[Dict]:
-        """Busca tickets usando JQL"""
+        """
+        Busca tickets en Jira usando una consulta JQL.
+
+        Args:
+            jql (str): Consulta JQL para filtrar tickets.
+            max_results (int): Número máximo de resultados a devolver.
+
+        Returns:
+            dict o None: Resultados de la búsqueda o None si hay error.
+        """
         try:
             payload = {
                 "jql": jql,
@@ -72,7 +108,15 @@ class JiraClient:
             return None
     
     async def get_project(self, project_key: str) -> Optional[Dict]:
-        """Obtiene información de un proyecto"""
+        """
+        Obtiene información de un proyecto de Jira.
+
+        Args:
+            project_key (str): Clave del proyecto (por ejemplo, 'PROJ').
+
+        Returns:
+            dict o None: Información del proyecto o None si hay error.
+        """
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -90,7 +134,15 @@ class JiraClient:
             return None
     
     def format_issue_info(self, issue_data: Dict) -> str:
-        """Formatea la información del ticket para que sea legible"""
+        """
+        Formatea la información de un ticket para presentación legible.
+
+        Args:
+            issue_data (dict): Datos del ticket obtenidos de la API.
+
+        Returns:
+            str: Información formateada del ticket.
+        """
         if not issue_data:
             return "No se encontró información del ticket"
         
@@ -109,7 +161,15 @@ class JiraClient:
         return info.strip()
     
     def format_search_results(self, search_data: Dict) -> str:
-        """Formatea los resultados de búsqueda"""
+        """
+        Formatea los resultados de búsqueda de tickets para presentación legible.
+
+        Args:
+            search_data (dict): Datos de búsqueda obtenidos de la API.
+
+        Returns:
+            str: Resumen formateado de los tickets encontrados.
+        """
         if not search_data or "issues" not in search_data:
             return "No se encontraron tickets"
         

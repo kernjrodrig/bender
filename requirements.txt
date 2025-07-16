@@ -1,3 +1,5 @@
 fastapi
 httpx
-uvicorn 
+uvicorn
+python-telegram-bot
+requests 

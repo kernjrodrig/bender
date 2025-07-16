@@ -79,6 +79,7 @@ def detect_jira_query(mensaje: str) -> tuple[bool, str, list]:
 async def get_jira_info(query_type: str, query_value) -> str:
     """Obtiene información de Jira según el tipo de consulta. Soporta múltiples tickets."""
     try:
+        print(f"DEBUG: get_jira_info iniciado - tipo: {query_type}, valor: {query_value}")
         # Si la consulta es sobre uno o varios tickets
         if query_type in ['ticket', 'status', 'assignee', 'priority', 'summary', 'changelog', 'project_of_ticket']:
             # Si es una lista, procesar cada ticket
@@ -222,77 +223,92 @@ async def get_jira_info(query_type: str, query_value) -> str:
             return jira_client.format_search_results(search_data)
         return "Tipo de consulta no reconocido"
     except Exception as e:
-        return f"Error consultando Jira: {str(e)}"
+        error_msg = f"Error consultando Jira: {str(e)}"
+        print(f"DEBUG: {error_msg}")
+        return error_msg
 
 # Endpoint principal de chat que recibe mensajes y responde usando Ollama y Jira
 @app.post("/chat")
 async def chat(request: Request):
-    data = await request.json()
-    mensaje = data.get("mensaje", "")
-    if not mensaje:
-        return JSONResponse({"error": "Mensaje vacío"}, status_code=400)
-    
-    # Detectar si es una consulta de Jira
-    is_jira_query, query_type, query_value = detect_jira_query(mensaje)
-    
-    print(f"DEBUG: is_jira_query={is_jira_query}, query_type={query_type}, query_value={query_value}")
-    
-    if is_jira_query:
-        print(f"DEBUG: Consultando Jira - tipo: {query_type}, valor: {query_value}")
-        # Obtener información de Jira (ahora query_value puede ser lista)
-        jira_info = await get_jira_info(query_type, query_value)
-        print(f"DEBUG: Información de Jira obtenida: {jira_info[:200]}...")
-        
-        # Crear prompt para Ollama con contexto de Jira
-        prompt = f"""
-        Como asistente experto en Jira, analiza la siguiente información y responde de manera útil y clara:
-
-        Consulta del usuario: {mensaje}
-        
-        Información de Jira obtenida:
-        {jira_info}
-        
-        Por favor, proporciona una respuesta útil basada en esta información. Si hay errores o falta información, explícalo claramente.
-        """
-    else:
-        # Consulta normal sin Jira
-        prompt = mensaje
-    
-    # Preparar payload para Ollama API
-    payload = {
-        "model": MODEL_NAME,
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "stream": False
-    }
-    
     try:
+        print("DEBUG: Iniciando endpoint /chat")
+        data = await request.json()
+        mensaje = data.get("mensaje", "")
+        if not mensaje:
+            return JSONResponse({"error": "Mensaje vacío"}, status_code=400)
+        
+        print(f"DEBUG: Mensaje recibido: {mensaje}")
+        
+        # Detectar si es una consulta de Jira
+        is_jira_query, query_type, query_value = detect_jira_query(mensaje)
+        
+        print(f"DEBUG: is_jira_query={is_jira_query}, query_type={query_type}, query_value={query_value}")
+        
+        if is_jira_query:
+            print(f"DEBUG: Consultando Jira - tipo: {query_type}, valor: {query_value}")
+            # Obtener información de Jira (ahora query_value puede ser lista)
+            jira_info = await get_jira_info(query_type, query_value)
+            print(f"DEBUG: Información de Jira obtenida: {jira_info[:200]}...")
+            
+            # Crear prompt para Ollama con contexto de Jira
+            prompt = f"""
+            Como asistente experto en Jira, analiza la siguiente información y responde de manera útil y clara:
+
+            Consulta del usuario: {mensaje}
+            
+            Información de Jira obtenida:
+            {jira_info}
+            
+            Por favor, proporciona una respuesta útil basada en esta información. Si hay errores o falta información, explícalo claramente.
+            """
+        else:
+            # Consulta normal sin Jira
+            prompt = mensaje
+        
+        print(f"DEBUG: Prompt preparado para Ollama: {prompt[:100]}...")
+        
+        # Preparar payload para Ollama API
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "stream": False
+        }
+        
+        print(f"DEBUG: Conectando a Ollama en {OLLAMA_URL}")
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{OLLAMA_URL}/api/chat",
                 json=payload,
-                timeout=300.0  # 5 minutos de timeout
+                timeout=300.0  # Aumentar timeout a 5 minutos
             )
             
+            print(f"DEBUG: Respuesta de Ollama - Status: {response.status_code}")
+            
             if response.status_code != 200:
-                return JSONResponse(
-                    {"error": f"Error al conectar con Ollama: {response.status_code}"}, 
-                    status_code=500
-                )
+                error_msg = f"Error al conectar con Ollama: {response.status_code}"
+                print(f"DEBUG: {error_msg}")
+                return JSONResponse({"error": error_msg}, status_code=500)
             
             response_data = response.json()
             respuesta = response_data.get("message", {}).get("content", "Sin respuesta")
             
+            print(f"DEBUG: Respuesta final: {respuesta[:100]}...")
             return {"respuesta": respuesta}
             
-    except httpx.TimeoutException:
-        return JSONResponse({"error": "Timeout: Ollama tardó más de 5 minutos en responder"}, status_code=500)
+    except httpx.TimeoutException as e:
+        error_msg = f"Timeout: Ollama tardó más de 5 minutos en responder: {str(e)}"
+        print(f"DEBUG: {error_msg}")
+        return JSONResponse({"error": error_msg}, status_code=500)
     except Exception as e:
-        return JSONResponse({"error": f"Error de conexión: {str(e)}"}, status_code=500)
+        error_msg = f"Error de conexión: {str(e)}"
+        print(f"DEBUG: {error_msg}")
+        return JSONResponse({"error": error_msg}, status_code=500)
 
 # Endpoint para listar modelos disponibles en Ollama
 @app.get("/models")

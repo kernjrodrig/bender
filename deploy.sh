@@ -39,8 +39,8 @@ run_container() {
         --name ${CONTAINER_NAME} \
         --restart unless-stopped \
         -p 8000:8000 \
-        -e OLLAMA_URL=http://192.168.10.14:11434 \
-        -e MODEL_NAME=llama3 \
+        -e OLLAMA_URL=https://5aaf5f3a9d6b.ngrok-free.app \
+        -e MODEL_NAME=-llama3 \
         --health-cmd="curl -f http://localhost:8000/ || exit 1" \
         --health-interval=30s \
         --health-timeout=10s \

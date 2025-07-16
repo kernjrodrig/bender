@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.10.14:11434")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5aaf5f3a9d6b.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 
 # Inicializar cliente de Jira
@@ -63,7 +63,10 @@ async def get_jira_info(query_type: str, query_value: str) -> str:
     try:
         if query_type == 'ticket':
             issue_data = await jira_client.get_issue(query_value)
-            return jira_client.format_issue_info(issue_data)
+            if issue_data:
+                return jira_client.format_issue_info(issue_data)
+            else:
+                return f"No se encontró información del ticket {query_value}"
         
         elif query_type == 'project':
             project_data = await jira_client.get_project(query_value)
@@ -73,7 +76,10 @@ async def get_jira_info(query_type: str, query_value: str) -> str:
         
         elif query_type == 'search':
             search_data = await jira_client.search_issues(query_value)
-            return jira_client.format_search_results(search_data)
+            if search_data:
+                return jira_client.format_search_results(search_data)
+            else:
+                return "No se encontraron resultados para la búsqueda"
         
         elif query_type == 'status':
             issue_data = await jira_client.get_issue(query_value)
@@ -105,6 +111,7 @@ async def chat(request: Request):
     is_jira_query, query_type, query_value = detect_jira_query(mensaje)
     
     print(f"DEBUG: is_jira_query={is_jira_query}, query_type={query_type}, query_value={query_value}")
+    print(f"DEBUG: MODEL_NAME configurado: {MODEL_NAME}")
     
     if is_jira_query:
         print(f"DEBUG: Consultando Jira - tipo: {query_type}, valor: {query_value}")
@@ -124,8 +131,13 @@ async def chat(request: Request):
         Por favor, proporciona una respuesta útil basada en esta información. Si hay errores o falta información, explícalo claramente.
         """
     else:
-        # Consulta normal sin Jira
-        prompt = mensaje
+        # Consulta normal sin Jira, pide respuesta breve y concreta
+        prompt = (
+            f"Responde de forma breve, concreta y amable. "
+            f"Si el mensaje es solo un saludo como 'hola', responde únicamente: "
+            f"¡Hola! ¿En qué puedo ayudarte? 😊\n\n"
+            f"Mensaje del usuario: {mensaje}"
+        )
     
     # Preparar payload para Ollama API
     payload = {
@@ -139,17 +151,23 @@ async def chat(request: Request):
         "stream": False
     }
     
+    print(f"DEBUG: Enviando payload a Ollama: {payload}")
+    
     try:
         async with httpx.AsyncClient() as client:
+            print(f"DEBUG: Conectando a {OLLAMA_URL}/api/chat")
             response = await client.post(
                 f"{OLLAMA_URL}/api/chat",
                 json=payload,
                 timeout=300.0  # 5 minutos de timeout
             )
             
+            print(f"DEBUG: Status code de Ollama: {response.status_code}")
+            print(f"DEBUG: Respuesta de Ollama: {response.text[:500]}...")
+            
             if response.status_code != 200:
                 return JSONResponse(
-                    {"error": f"Error al conectar con Ollama: {response.status_code}"}, 
+                    {"error": f"Error al conectar con Ollama: {response.status_code} - {response.text}"}, 
                     status_code=500
                 )
             
@@ -159,8 +177,10 @@ async def chat(request: Request):
             return {"respuesta": respuesta}
             
     except httpx.TimeoutException:
+        print("DEBUG: Timeout en la conexión con Ollama")
         return JSONResponse({"error": "Timeout: Ollama tardó más de 5 minutos en responder"}, status_code=500)
     except Exception as e:
+        print(f"DEBUG: Excepción en chat: {str(e)}")
         return JSONResponse({"error": f"Error de conexión: {str(e)}"}, status_code=500)
 
 @app.get("/models")

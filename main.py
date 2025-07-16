@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.10.14:11434")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5aaf5f3a9d6b.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 
 # Inicializar cliente de Jira

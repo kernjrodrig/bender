@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OLLAMA_URL=http://192.168.10.14:11434
+      - OLLAMA_URL=https://5aaf5f3a9d6b.ngrok-free.app
       - MODEL_NAME=llama3
     restart: unless-stopped
     healthcheck:

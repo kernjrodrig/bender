@@ -25,7 +25,7 @@ USER appuser
 EXPOSE 8000
 
 # Health check para verificar que la aplicación esté funcionando
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=50s --timeout=20s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/ || exit 1
 
 # Usar el script de inicio robusto

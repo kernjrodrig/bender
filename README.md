@@ -2,34 +2,60 @@
 
 Un chatbot inteligente que integra con Jira y utiliza Ollama para procesamiento de lenguaje natural.
 
-## 🚀 Despliegue Rápido
+## 🚀 Despliegue Completo con Podman y Docker Compose
 
-### Opción 1: Script Automático (Recomendado)
+### **Requisitos previos**
+- Tener instalado Podman y podman-compose (o Docker y docker-compose).
+- Clonar este repositorio y ubicarse en la raíz del proyecto.
+
+### **1. Configura tus variables de entorno**
+
+Edita el archivo `docker-compose.yml` si necesitas cambiar:
+- La URL de Ollama (`OLLAMA_URL`)
+- El modelo (`MODEL_NAME`)
+- Si quieres activar el bot de Telegram (`ENABLE_TELEGRAM_BOT=true` o `false`)
+
+### **2. Construye las imágenes**
+
 ```bash
-cd /home/javo/Documents/bot_guzdan
-./deploy.sh
+podman-compose build
 ```
 
-### Opción 2: Comandos Manuales
-```bash
-# Construir imagen
-podman build -t bender-ia:latest .
+### **3. Levanta los servicios**
 
-# Ejecutar contenedor con restart automático
-podman run -d \
-    --name bender-ia \
-    --restart unless-stopped \
-    -p 8000:8000 \
-    -e OLLAMA_URL=http://https://5aaf5f3a9d6b.ngrok-free.app \
-    -e MODEL_NAME=llama3 \
-    --health-cmd="curl -f http://localhost:8000/ || exit 1" \
-    --health-interval=30s \
-    --health-timeout=10s \
-    --health-retries=3 \
-    --health-start-period=40s \
-    --memory=1g \
-    bender-ia:latest
+```bash
+podman-compose up -d
 ```
+
+Esto levantará:
+- **Backend** (FastAPI) en el puerto 8000
+- **Frontend** (React + nginx) en el puerto 5173
+- **Bot de Telegram** (opcional, según variable de entorno)
+
+### **4. Accede a la aplicación**
+
+- **Frontend:** [http://localhost:5173](http://localhost:5173)
+- **Backend:** [http://localhost:8000](http://localhost:8000)
+
+### **5. Logs y gestión**
+
+```bash
+# Ver logs de todos los servicios
+podman-compose logs -f
+
+# Detener los servicios
+podman-compose down
+```
+
+## 🛠️ Solución de Problemas con Compose
+
+- Si cambias variables de entorno, reconstruye el frontend:
+  ```bash
+  podman-compose build frontend
+  podman-compose up -d frontend
+  ```
+- Si tienes errores de red, asegúrate de que los servicios estén en la misma red definida por Compose.
+- Si el bot de Telegram no debe ejecutarse, pon `ENABLE_TELEGRAM_BOT=false` en el `docker-compose.yml`.
 
 ## 🔧 Gestión del Contenedor
 
@@ -120,11 +146,12 @@ El contenedor se reiniciará automáticamente en los siguientes casos:
 |----------|-------------------|-------------|
 | `OLLAMA_URL` | `http://192.168.10.14:11434` | URL del servidor Ollama |
 | `MODEL_NAME` | `llama3` | Modelo de lenguaje a usar |
+| `ENABLE_TELEGRAM_BOT` | `false` | Activa o desactiva el bot de Telegram |
 
 ## 🏗️ Arquitectura
 
 - **Backend**: FastAPI con Python 3.11
-- **Frontend**: HTML/JavaScript estático
+- **Frontend**: React + nginx
 - **IA**: Ollama con modelo Llama3
 - **Integración**: Jira API v3
 - **Contenedor**: Podman con configuración robusta 

@@ -38,10 +38,15 @@ else
     echo "⚠️  Advertencia: No se puede conectar a Ollama, pero continuando..."
 fi
 
-# Iniciar el bot de Telegram en segundo plano
-echo "🤖 Iniciando bot de Telegram..."
-python telegram_bot.py &
-TELEGRAM_BOT_PID=$!
+# Iniciar el bot de Telegram solo si está habilitado
+if [ "${ENABLE_TELEGRAM_BOT}" = "true" ]; then
+    echo "🤖 Iniciando bot de Telegram..."
+    python telegram_bot.py &
+    TELEGRAM_BOT_PID=$!
+else
+    echo "🤖 Bot de Telegram desactivado por configuración (ENABLE_TELEGRAM_BOT != true)"
+    TELEGRAM_BOT_PID=""
+fi
 
 # Iniciar la aplicación con uvicorn
 echo "🎯 Iniciando servidor uvicorn..."

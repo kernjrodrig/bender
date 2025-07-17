@@ -1,6 +1,6 @@
 # Importaciones de FastAPI y utilidades
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
@@ -32,12 +32,10 @@ MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 # Inicializar cliente de Jira
 jira_client = JiraClient()
 
-# Endpoint principal que sirve el frontend (index.html)
+# Endpoint principal que redirige al nuevo frontend
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    with open("static/index.html", encoding="utf-8") as f:
-        content = f.read()
-    return HTMLResponse(content=content)
+    return RedirectResponse(url="http://localhost:5173")
     
 # Función para detectar si un mensaje es una consulta de Jira y extraer información relevante
 def detect_jira_query(mensaje: str) -> tuple[bool, str, list]:
@@ -324,5 +322,4 @@ async def list_models():
     except Exception as e:
         return JSONResponse({"error": f"Error: {str(e)}"}, status_code=500)
 
-# Servir archivos estáticos (frontend)
-app.mount("/static", StaticFiles(directory="static"), name="static") 
+# El frontend ahora está en http://localhost:5173 

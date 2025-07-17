@@ -11,6 +11,7 @@ services:
       - MODEL_NAME=llama3
       - TELEGRAM_TOKEN=7342077363:AAGuI9fAULbbcY4EFce8nRRkEmbUXy113rc
       - FASTAPI_URL=http://localhost:8000/chat
+      - ENABLE_TELEGRAM_BOT=false
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -33,4 +34,16 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 3
-        window: 120s 
+        window: 120s
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: bender-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - bender-ia
+    environment:
+      - VITE_API_URL=http://localhost:8000/chat
+    restart: unless-stopped 

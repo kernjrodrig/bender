@@ -37,9 +37,10 @@ jira_client = JiraClient()
 async def index():
     return RedirectResponse(url="http://localhost:5173")
     
-# Función para detectar si un mensaje es una consulta de Jira y extraer información relevante
-def detect_jira_query(mensaje: str) -> tuple[bool, str, list]:
-    """Detecta si el mensaje es una consulta de Jira y extrae información (soporta múltiples tickets)"""
+# Reemplaza detect_jira_query por una nueva función que detecta múltiples consultas
+
+def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
+    """Detecta todas las consultas de Jira en el mensaje y extrae información relevante (soporta múltiples tipos y tickets)"""
     patterns = {
         'ticket': r'(?:ticket|issue|jira|tarea|problema)\s+((?:sd-\d{3}(?:,?\s*)?)+)',
         'project': r'(?:proyecto|project)\s+([A-Z]+)',
@@ -48,30 +49,25 @@ def detect_jira_query(mensaje: str) -> tuple[bool, str, list]:
         'status': r'(?:estado|status)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:estado|status)',
         'assignee': r'(?:asignado|assignee|asignación)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:asignado|assignee|asignación)',
         'priority': r'(?:prioridad|priority)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:prioridad|priority)',
-        'summary': r'(?:resumen|summary)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:resumen|summary)',
-        'changelog': r'(?:historial de cambios|changelog)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
+        'summary': r'(?:resumen|summary|resumir)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:resumen|summary)',
+        'changelog': r'(?:historial de cambios|changelog|historial)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
         'simple_ticket': r'\b(sd-\d{3})\b'
     }
-    # Buscar patrones específicos (excepto simple_ticket)
+    results = []
     for query_type, pattern in patterns.items():
         if query_type != 'simple_ticket':
-            match = re.search(pattern, mensaje, re.IGNORECASE)
-            if match:
-                # Puede haber varios grupos, buscar el primero no None
+            for match in re.finditer(pattern, mensaje, re.IGNORECASE):
                 value = match.group(1) if match.group(1) else (match.group(2) if len(match.groups()) > 1 else None)
                 if value:
-                    # Extraer todos los tickets del string encontrado
                     tickets = re.findall(r'sd-\d{3}', value, re.IGNORECASE)
                     if tickets:
-                        print(f"DEBUG: Detectado patrón '{query_type}' con tickets {tickets}")
-                        return True, query_type, tickets
-    # Si no se encontró patrón específico, buscar todos los códigos de ticket simples
-    simple_matches = re.findall(patterns['simple_ticket'], mensaje, re.IGNORECASE)
-    if simple_matches:
-        print(f"DEBUG: Detectado códigos de ticket simples: {simple_matches}")
-        return True, 'ticket', simple_matches
-    print(f"DEBUG: No se detectó consulta de Jira en: '{mensaje}'")
-    return False, "", []
+                        results.append((query_type, tickets))
+    # Si no se encontró ningún patrón, buscar tickets simples
+    if not results:
+        simple_matches = re.findall(patterns['simple_ticket'], mensaje, re.IGNORECASE)
+        if simple_matches:
+            results.append(('ticket', simple_matches))
+    return results
 
 # Función para obtener información de Jira según el tipo de consulta detectada
 async def get_jira_info(query_type: str, query_value) -> str:
@@ -225,7 +221,7 @@ async def get_jira_info(query_type: str, query_value) -> str:
         print(f"DEBUG: {error_msg}")
         return error_msg
 
-# Endpoint principal de chat que recibe mensajes y responde usando Ollama y Jira
+# Modificar el endpoint /chat para soportar múltiples consultas Jira
 @app.post("/chat")
 async def chat(request: Request):
     try:
@@ -237,18 +233,40 @@ async def chat(request: Request):
         
         print(f"DEBUG: Mensaje recibido: {mensaje}")
         
-        # Detectar si es una consulta de Jira
-        is_jira_query, query_type, query_value = detect_jira_query(mensaje)
+        # Detectar todas las consultas de Jira
+        jira_queries = detect_jira_queries(mensaje)
+        print(f"DEBUG: jira_queries detectadas: {jira_queries}")
         
-        print(f"DEBUG: is_jira_query={is_jira_query}, query_type={query_type}, query_value={query_value}")
+        # Revisar si hay al menos una consulta de tipo 'summary'
+        has_summary = any(q[0] == 'summary' for q in jira_queries)
         
-        if is_jira_query:
-            print(f"DEBUG: Consultando Jira - tipo: {query_type}, valor: {query_value}")
-            # Obtener información de Jira (ahora query_value puede ser lista)
-            jira_info = await get_jira_info(query_type, query_value)
-            print(f"DEBUG: Información de Jira obtenida: {jira_info[:200]}...")
-            
-            # Crear prompt para Ollama con contexto de Jira
+        if jira_queries and has_summary:
+            # Obtener la información completa de todos los tickets de tipo summary
+            summary_tickets = []
+            for query_type, tickets in jira_queries:
+                if query_type == 'summary':
+                    summary_tickets.extend(tickets)
+            # Eliminar duplicados
+            summary_tickets = list(set(summary_tickets))
+            # Obtener la info completa de cada ticket
+            ticket_infos = []
+            for ticket in summary_tickets:
+                issue_data = await jira_client.get_issue(ticket)
+                if issue_data is None:
+                    ticket_infos.append(f"Ticket {ticket}: No se encontró información")
+                else:
+                    ticket_infos.append(jira_client.format_issue_info(issue_data))
+            # Unir toda la info
+            all_info = "\n\n".join(ticket_infos)
+            resumen_prompt = f"Por favor, haz un resumen general de la siguiente información de tickets de Jira. Si hay errores o falta información, explícalo claramente.\n\n{all_info}"
+            prompt = resumen_prompt
+        elif jira_queries:
+            jira_infos = []
+            for query_type, tickets in jira_queries:
+                print(f"DEBUG: Consultando Jira - tipo: {query_type}, tickets: {tickets}")
+                info = await get_jira_info(query_type, tickets)
+                jira_infos.append(info)
+            jira_info = "\n".join(jira_infos)
             prompt = f"""
             Como asistente experto en Jira, analiza la siguiente información y responde de manera útil y clara:
 
@@ -260,7 +278,6 @@ async def chat(request: Request):
             Por favor, proporciona una respuesta útil basada en esta información. Si hay errores o falta información, explícalo claramente.
             """
         else:
-            # Consulta normal sin Jira
             prompt = mensaje
         
         print(f"DEBUG: Prompt preparado para Ollama: {prompt[:100]}...")

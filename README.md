@@ -8,9 +8,41 @@ Un chatbot inteligente que integra con Jira y utiliza Ollama para procesamiento 
 - Tener instalado Podman y podman-compose (o Docker y docker-compose).
 - Clonar este repositorio y ubicarse en la raíz del proyecto.
 
-### **1. Configura tus variables de entorno**
+### **1. Sistema de Configuración Centralizada**
 
-Edita el archivo `docker-compose.yml` si necesitas cambiar:
+El proyecto usa un sistema de configuración centralizada que permite cambiar la URL de Ollama y otras configuraciones desde un solo lugar.
+
+#### **Archivos de Configuración:**
+- **`config.py`**: Configuración principal del proyecto
+- **`docker.env`**: Variables de entorno para Docker
+- **`generate_config.py`**: Script para generar archivos de configuración
+
+#### **Comandos de Configuración:**
+```bash
+# Mostrar configuración actual
+python generate_config.py show
+
+# Generar archivo docker.env
+python generate_config.py docker
+
+# Generar archivo .env.example
+python generate_config.py env
+
+# Generar configuración de Nginx
+python generate_config.py nginx
+
+# Generar todos los archivos
+python generate_config.py all
+```
+
+#### **Para cambiar la URL de Ollama:**
+1. Edita `config.py` con la nueva URL
+2. Ejecuta: `python generate_config.py docker`
+3. Reinicia los servicios: `podman-compose down && podman-compose up -d`
+
+### **2. Configura tus variables de entorno**
+
+El archivo `docker-compose.yml` ahora usa `docker.env` para las variables de entorno. Si necesitas cambiar:
 - La URL de Ollama (`OLLAMA_URL`)
 - El modelo (`MODEL_NAME`)
 - Si quieres activar el bot de Telegram (`ENABLE_TELEGRAM_BOT=true` o `false`)
@@ -100,17 +132,29 @@ El contenedor ahora tiene configuración robusta con:
 - **Manejo de señales**: Shutdown elegante
 
 ### Error: No se puede conectar a Ollama
-Verificar que Ollama esté ejecutándose en la IP correcta:
+Verificar que Ollama esté ejecutándose en la URL correcta:
 ```bash
 # Verificar conectividad
-curl http://192.168.10.14:11434/api/tags
+curl https://9e00e1364451.ngrok-free.app/api/tags
 
-# Si no responde, actualizar la URL en el contenedor
-podman stop bender-ia
-podman run -d --name bender-ia --restart unless-stopped -p 8000:8000 \
-    -e OLLAMA_URL=http://NUEVA_IP:11434 \
-    -e MODEL_NAME=llama3 \
-    bender-ia:latest
+# Si no responde, actualizar la URL usando el sistema centralizado:
+# 1. Editar config.py con la nueva URL
+# 2. python generate_config.py docker
+# 3. podman-compose down && podman-compose up -d
+```
+
+### Error: Problemas con la configuración centralizada
+Si hay problemas con el sistema de configuración:
+
+```bash
+# Verificar que config.py existe y es válido
+python -c "from config import OLLAMA_URL; print(OLLAMA_URL)"
+
+# Regenerar todos los archivos de configuración
+python generate_config.py all
+
+# Verificar que docker.env se generó correctamente
+cat docker.env
 ```
 
 ## 📊 Monitoreo
@@ -144,9 +188,73 @@ El contenedor se reiniciará automáticamente en los siguientes casos:
 
 | Variable | Valor por Defecto | Descripción |
 |----------|-------------------|-------------|
-| `OLLAMA_URL` | `http://192.168.10.14:11434` | URL del servidor Ollama |
+| `OLLAMA_URL` | `https://9e00e1364451.ngrok-free.app` | URL del servidor Ollama |
 | `MODEL_NAME` | `llama3` | Modelo de lenguaje a usar |
+| `FRONTEND_URL` | `http://localhost:5173` | URL del frontend |
+| `OLLAMA_TIMEOUT` | `300` | Timeout en segundos |
+| `CORS_ORIGINS` | `*` | Orígenes permitidos para CORS |
+| `DEBUG_MODE` | `true` | Modo debug activado |
 | `ENABLE_TELEGRAM_BOT` | `false` | Activa o desactiva el bot de Telegram |
+
+## 🔧 Sistema de Configuración
+
+### **Archivos de Configuración**
+
+- **`config.py`**: Configuración principal centralizada
+- **`docker.env`**: Variables de entorno para Docker
+- **`generate_config.py`**: Script de generación automática
+- **`CONFIGURACION.md`**: Documentación detallada
+
+### **Procedimiento para Cambiar Configuración**
+
+1. **Editar configuración principal:**
+   ```bash
+   # Editar config.py con la nueva URL
+   nano config.py
+   ```
+
+2. **Generar archivos actualizados:**
+   ```bash
+   # Generar docker.env con nueva configuración
+   python generate_config.py docker
+   
+   # O generar todos los archivos
+   python generate_config.py all
+   ```
+
+3. **Reiniciar servicios:**
+   ```bash
+   # Detener servicios
+   podman-compose down
+   
+   # Levantar con nueva configuración
+   podman-compose up -d
+   ```
+
+4. **Verificar cambios:**
+   ```bash
+   # Ver configuración actual
+   python generate_config.py show
+   
+   # Ver logs
+   podman-compose logs -f
+   ```
+
+### **Comandos Útiles del Sistema**
+
+```bash
+# Ver configuración actual
+python generate_config.py show
+
+# Generar archivos de configuración
+python generate_config.py docker    # Solo docker.env
+python generate_config.py env       # Solo .env.example
+python generate_config.py nginx     # Solo nginx-bender.conf
+python generate_config.py all       # Todos los archivos
+
+# Verificar que la aplicación funciona
+curl http://localhost:8000/models
+```
 
 ## 🏗️ Arquitectura
 
@@ -154,4 +262,12 @@ El contenedor se reiniciará automáticamente en los siguientes casos:
 - **Frontend**: React + nginx
 - **IA**: Ollama con modelo Llama3
 - **Integración**: Jira API v3
-- **Contenedor**: Podman con configuración robusta 
+- **Contenedor**: Podman con configuración robusta
+- **Configuración**: Sistema centralizado con `config.py`
+
+## 📚 Documentación Adicional
+
+- **`CONFIGURACION.md`**: Documentación detallada del sistema de configuración
+- **`generate_config.py`**: Script para generar archivos de configuración
+- **`config.py`**: Configuración principal del proyecto
+- **`docker.env`**: Variables de entorno para Docker 

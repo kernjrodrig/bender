@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 # Configuración de variables de entorno para Ollama
-OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5aaf5f3a9d6b.ngrok-free.app")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://16ca44479b54.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 
 # Inicializar cliente de Jira

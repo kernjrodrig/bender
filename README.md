@@ -135,7 +135,7 @@ El contenedor ahora tiene configuración robusta con:
 Verificar que Ollama esté ejecutándose en la URL correcta:
 ```bash
 # Verificar conectividad
-curl https://9e00e1364451.ngrok-free.app/api/tags
+curl https://c510f9a99a12.ngrok-free.app/api/tags
 
 # Si no responde, actualizar la URL usando el sistema centralizado:
 # 1. Editar config.py con la nueva URL
@@ -188,7 +188,7 @@ El contenedor se reiniciará automáticamente en los siguientes casos:
 
 | Variable | Valor por Defecto | Descripción |
 |----------|-------------------|-------------|
-| `OLLAMA_URL` | `https://9e00e1364451.ngrok-free.app` | URL del servidor Ollama |
+| `OLLAMA_URL` | `https://5a15b4672e26.ngrok-free.app` | URL del servidor Ollama |
 | `MODEL_NAME` | `llama3` | Modelo de lenguaje a usar |
 | `FRONTEND_URL` | `http://localhost:5173` | URL del frontend |
 | `OLLAMA_TIMEOUT` | `300` | Timeout en segundos |

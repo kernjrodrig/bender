@@ -1,7 +1,7 @@
 import os
 
 # Configuración de Ollama
-OLLAMA_URL = os.getenv("OLLAMA_URL", "https://9e00e1364451.ngrok-free.app")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5a15b4672e26.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 
 # Configuración del frontend

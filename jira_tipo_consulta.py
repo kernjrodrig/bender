@@ -14,7 +14,7 @@ def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
         'assignee': r'(?:asignado|assignee|asignación)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:asignado|assignee|asignación)',
         'priority': r'(?:prioridad|priority)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:prioridad|priority)',
         'summary': r'(?:resumen|summary|resumir)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:resumen|summary)',
-        'changelog': r'(?:historial de cambios|changelog|historial)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
+        'changelog': r'(?:historial de cambios|changelog|historial|cambios)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
         'simple_ticket': r'\b(sd-\d{3})\b'
     }
     results = []

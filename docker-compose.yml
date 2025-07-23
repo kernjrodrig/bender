@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - OLLAMA_URL=https://5a15b4672e26.ngrok-free.app
+      - OLLAMA_URL=https://7524977226f5.ngrok-free.app
       - MODEL_NAME=llama3
       - TELEGRAM_TOKEN=7342077363:AAGuI9fAULbbcY4EFce8nRRkEmbUXy113rc
       - FASTAPI_URL=http://localhost:8000/chat

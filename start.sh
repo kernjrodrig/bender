@@ -26,12 +26,17 @@ trap cleanup SIGTERM SIGINT
 
 # Verificar variables de entorno
 echo "🔧 Configuración:"
+<<<<<<< HEAD
 echo "   - OLLAMA_URL: ${OLLAMA_URL:-https://5a15b4672e26.ngrok-free.app}"
+=======
+echo "   - OLLAMA_URL: ${OLLAMA_URL:-https://16ca44479b54.ngrok-free.app}"
+>>>>>>> main
 echo "   - MODEL_NAME: ${MODEL_NAME:-llama3}"
 echo "   - Puerto: 8000"
 
 # Verificar conectividad con Ollama
 echo "🔍 Verificando conectividad con Ollama..."
+
 if curl -s --max-time 10 "${OLLAMA_URL:-https://5a15b4672e26.ngrok-free.app}/api/tags" > /dev/null; then
     echo "✅ Ollama está accesible"
 else

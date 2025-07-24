@@ -6,16 +6,16 @@ jira_client = JiraClient()
 def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
     """Detecta todas las consultas de Jira en el mensaje y extrae información relevante (soporta múltiples tipos y tickets)"""
     patterns = {
-        'ticket': r'(?:ticket|issue|jira|tarea|problema)\s+((?:sd-\d{3}(?:,?\s*)?)+)',
+        'ticket': r'(?:ticket|issue|jira|tarea|problema)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
         'project': r'(?:proyecto|project)\s+([A-Z]+)',
-        'project_of_ticket': r'(?:proyecto|project)\s+((?:sd-\d{3}(?:,?\s*)?)+)',
+        'project_of_ticket': r'(?:proyecto|project)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
         'search': r'(?:buscar|search|encontrar|listar)\s+(.+?)(?:\s+en\s+jira)?$',
-        'status': r'(?:estado|status)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:estado|status)',
-        'assignee': r'(?:asignado|assignee|asignación)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:asignado|assignee|asignación)',
-        'priority': r'(?:prioridad|priority)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:prioridad|priority)',
-        'summary': r'(?:resumen|summary|resumir)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:resumen|summary)',
-        'changelog': r'(?:historial de cambios|changelog|historial|cambios)\s+((?:sd-\d{3}(?:,?\s*)?)+)|((?:sd-\d{3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
-        'simple_ticket': r'\b(sd-\d{3})\b'
+        'status': r'(?:estado|status)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:estado|status)',
+        'assignee': r'(?:asignado|assignee|asignación)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:asignado|assignee|asignación)',
+        'priority': r'(?:prioridad|priority)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:prioridad|priority)',
+        'summary': r'(?:resumen|summary|resumir)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:resumen|summary)',
+        'changelog': r'(?:historial de cambios|changelog|historial|cambios)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
+        'simple_ticket': r'\b(sd-\d{1,3})\b'
     }
     results = []
     for query_type, pattern in patterns.items():
@@ -23,7 +23,7 @@ def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
             for match in re.finditer(pattern, mensaje, re.IGNORECASE):
                 value = match.group(1) if match.group(1) else (match.group(2) if len(match.groups()) > 1 else None)
                 if value:
-                    tickets = re.findall(r'sd-\d{3}', value, re.IGNORECASE)
+                    tickets = re.findall(r'sd-\d{1,3}', value, re.IGNORECASE)
                     if tickets:
                         results.append((query_type, tickets))
     # Si no se encontró ningún patrón, buscar tickets simples

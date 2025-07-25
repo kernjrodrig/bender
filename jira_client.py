@@ -73,7 +73,7 @@ class JiraClient:
             print(f"DEBUG: Excepción obteniendo issue {issue_key}: {e}")
             return None
     
-    async def search_issues(self, jql: str, max_results: int = 50) -> Optional[Dict]:
+    async def search_issues(self, jql: str, max_results: int = 200) -> Optional[Dict]:
         """
         Busca tickets en Jira usando una consulta JQL.
 
@@ -160,27 +160,31 @@ class JiraClient:
 """
         return info.strip()
     
-    def format_search_results(self, search_data: Dict) -> str:
+    def format_search_results(self, search_data: Dict, formato_total: bool = False) -> str:
         """
         Formatea los resultados de búsqueda de tickets para presentación legible.
 
         Args:
             search_data (dict): Datos de búsqueda obtenidos de la API.
+            formato_total (bool): Si es True, muestra el total y un listado plano.
 
         Returns:
             str: Resumen formateado de los tickets encontrados.
         """
         if not search_data or "issues" not in search_data:
             return "No se encontraron tickets"
-        
         issues = search_data["issues"]
         if not issues:
             return "No se encontraron tickets que coincidan con la búsqueda"
-        
-        result = f"**Encontrados {len(issues)} tickets:**\n\n"
-        
-        for issue in issues:
-            fields = issue.get("fields", {})
-            result += f"• **{issue.get('key')}**: {fields.get('summary', 'Sin resumen')} - {fields.get('status', {}).get('name', 'N/A')}\n"
-        
-        return result.strip() 
+        if formato_total:
+            result = f"Total de tickets: {len(issues)}\n\n"
+            for issue in issues:
+                fields = issue.get("fields", {})
+                result += f"* {issue.get('key')}: {fields.get('summary', 'Sin resumen')}\n"
+            return result.strip()
+        else:
+            result = ""
+            for issue in issues:
+                fields = issue.get("fields", {})
+                result += f"* {issue.get('key')}: {fields.get('summary', 'Sin resumen')}\n"
+            return result.strip() 

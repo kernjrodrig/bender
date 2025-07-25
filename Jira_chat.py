@@ -5,9 +5,6 @@ import os
 from jira_tipo_consulta import detect_jira_queries, get_jira_info
 from filtro_tickets import (
     filtrar_tickets_abiertos,
-    filtrar_tickets_urgentes,
-    filtrar_tickets_asignados_a,
-    filtrar_tickets_sin_asignar,
     filtrar_tickets_por_estado,
     filtrar_tickets_cerrados
 )
@@ -29,29 +26,55 @@ async def chat(request: Request):
         
         print(f"DEBUG: Mensaje recibido: {mensaje}")
 
+        # --- Respuesta de ayuda si el usuario pide ayuda ---
+        # Solo mostrar ayuda si el mensaje es "hola" o empieza con "hola" y no menciona tickets después
+        if re.match(r"^hola(?!.*tickets?)", mensaje, re.IGNORECASE):
+            ejemplos = (
+            " 🤖¡Hola! Soy Bender, tu asistente virtual experto en Jira. \n\n"
+            "Estoy aquí para ayudarte a consultar información, estados, prioridades y más sobre tus tickets.\n\n"
+            "           • Estado del ticket SD-123\n"
+            "           • Resumen de SD-345\n"
+            "           • ¿Qué tickets están esperando soporte?\n"
+            "           • Prioridad de SD-312 y estado de SD-987\n"
+            "           • Tickets ya atendidos\n"
+            "           • Información sobre SD-678, SD-456, SD-789, SD-901\n\n\n"
+            "Estoy aquí para ayudarte 😊."
+            )
+            return {"respuesta": ejemplos}
+
         # --- Detección de filtros especiales ---
         mensaje_lower = mensaje.lower()
         filtro_resultado = None
+
+        # Lista de estados posibles y sus variantes
+        estados_variantes = [
+            "pendiente", "pendientes",
+            "atendido", "atendidos",
+            "escalado", "escalados",
+            "en progreso",
+            "esperando por soporte", "espera soporte", "soporte", "esperando soporte",
+            "esperando por cliente", "espera cliente", "cliente", "esperando cliente",
+            "cerrado", "cerrados",
+            "resuelto", "resueltos",
+            "cancelado", "cancelados"
+        ]
+
         if re.search(r"tickets?\s+abiertos?", mensaje_lower):
             filtro_resultado = await filtrar_tickets_abiertos()
-        elif re.search(r"tickets?\s+urgentes?", mensaje_lower):
-            filtro_resultado = await filtrar_tickets_urgentes()
-        elif re.search(r"tickets?\s+sin\s+asignar", mensaje_lower):
-            filtro_resultado = await filtrar_tickets_sin_asignar()
         elif re.search(r"tickets?\s+cerrados?", mensaje_lower):
             filtro_resultado = await filtrar_tickets_cerrados()
         else:
-            # Buscar por estado específico (en progreso, pendiente, atendido, etc.)
-            match_estado = re.search(r"tickets?\s+en\s+([\w\s]+)", mensaje_lower)
-            if match_estado:
-                estado = match_estado.group(1).strip()
-                filtro_resultado = await filtrar_tickets_por_estado(estado)
-            else:
-                # Buscar "tickets asignados a <persona>"
-                match = re.search(r"tickets?\s+asignados?\s+a\s+([\w.\-@]+)", mensaje_lower)
-                if match:
-                    persona = match.group(1)
-                    filtro_resultado = await filtrar_tickets_asignados_a(persona)
+            # Buscar si el mensaje menciona directamente un estado
+            for estado in estados_variantes:
+                if f"tickets {estado}" in mensaje_lower or f"ticket {estado}" in mensaje_lower:
+                    filtro_resultado = await filtrar_tickets_por_estado(estado)
+                    break
+            # Si no, buscar por la estructura "INFORMACIÓN + SD-123"
+            if not filtro_resultado:
+                match_estado = re.search(r"tickets?\s+en\s+([\w\s]+)", mensaje_lower)
+                if match_estado:
+                    estado = match_estado.group(1).strip()
+                    filtro_resultado = await filtrar_tickets_por_estado(estado)
 
         if filtro_resultado:
             prompt = f"Consulta del usuario: {mensaje}\n\nResultados de Jira:\n{filtro_resultado}\n\nPor favor, responde de manera útil y clara sobre estos tickets."

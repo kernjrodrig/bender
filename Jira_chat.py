@@ -1,3 +1,4 @@
+#Jira_chat.py
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import httpx
@@ -6,7 +7,8 @@ from jira_tipo_consulta import detect_jira_queries, get_jira_info
 from filtro_tickets import (
     filtrar_tickets_abiertos,
     filtrar_tickets_por_estado,
-    filtrar_tickets_cerrados
+    filtrar_tickets_cerrados,
+    filtrar_tickets_por_prioridad
 )
 import re
 
@@ -26,7 +28,6 @@ async def chat(request: Request):
         
         print(f"DEBUG: Mensaje recibido: {mensaje}")
 
-        # --- Respuesta de ayuda si el usuario pide ayuda ---
         # Solo mostrar ayuda si el mensaje es "hola" o empieza con "hola" y no menciona tickets después
         if re.match(r"^hola(?!.*tickets?)", mensaje, re.IGNORECASE):
             ejemplos = (
@@ -59,7 +60,13 @@ async def chat(request: Request):
             "cancelado", "cancelados"
         ]
 
-        if re.search(r"tickets?\s+abiertos?", mensaje_lower):
+        # Expresión regular mejorada para detectar prioridad aunque haya palabras intermedias
+        match_prioridad = re.search(r"prioridad\s*([1-5])|p\s*([1-5])", mensaje_lower)
+        if match_prioridad:
+            # Tomar el grupo que no sea None
+            prioridad = match_prioridad.group(1) if match_prioridad.group(1) else match_prioridad.group(2)
+            filtro_resultado = await filtrar_tickets_por_prioridad(prioridad)
+        elif re.search(r"tickets?\s+abiertos?", mensaje_lower):
             filtro_resultado = await filtrar_tickets_abiertos()
         elif re.search(r"tickets?\s+cerrados?", mensaje_lower):
             filtro_resultado = await filtrar_tickets_cerrados()

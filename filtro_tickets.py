@@ -1,9 +1,11 @@
+#Filtro Tickets.py
 import re
 from jira_client import JiraClient
 
 # Instancia global del cliente de Jira para realizar búsquedas
 jira_client = JiraClient()
 
+# Filtra y retorna los tickets abiertos según los estados definidos como abiertos en Jira
 async def filtrar_tickets_abiertos():
     """
     Obtiene tickets abiertos según los estados definidos como abiertos.
@@ -31,6 +33,7 @@ async def filtrar_tickets_abiertos():
         return "No se encontraron tickets abiertos."
     return jira_client.format_search_results(search_data, formato_total=True)
 
+# Filtra tickets por un estado específico, aceptando variantes y plurales
 async def filtrar_tickets_por_estado(estado: str):
     """
     Obtiene tickets por un estado específico, aceptando variantes y plurales.
@@ -65,6 +68,7 @@ async def filtrar_tickets_por_estado(estado: str):
         return f"No se encontraron tickets con estado '{estado_real}'."
     return jira_client.format_search_results(search_data, formato_total=True)
 
+# Filtra y retorna los tickets en estado cerrado, resuelto o cancelado
 async def filtrar_tickets_cerrados():
     """
     Obtiene tickets en estado cerrado, resuelto o cancelado.
@@ -79,6 +83,7 @@ async def filtrar_tickets_cerrados():
         return "No se encontraron tickets cerrados."
     return jira_client.format_search_results(search_data, formato_total=True)
 
+# Filtra y retorna los tickets en estado 'Pendiente'
 async def filtrar_tickets_pendientes():
     """
     Obtiene solo los tickets en estado 'Pendiente'.
@@ -91,6 +96,7 @@ async def filtrar_tickets_pendientes():
         return "No se encontraron tickets pendientes."
     return jira_client.format_search_results(search_data, formato_total=True) 
 
+# Filtra y retorna los tickets en estado 'En progreso'
 async def filtrar_tickets_en_progreso():
     """
     Obtiene solo los tickets en estado 'En progreso'.
@@ -103,6 +109,7 @@ async def filtrar_tickets_en_progreso():
         return "No se encontraron tickets en progreso."
     return jira_client.format_search_results(search_data, formato_total=True) 
 
+# Filtra y retorna los tickets en estado 'Atendido'
 async def filtrar_tickets_en_progreso():
     """
     Obtiene solo los tickets en estado 'Atendido'.
@@ -114,6 +121,8 @@ async def filtrar_tickets_en_progreso():
     if not search_data:
         return "No se encontraron tickets atendidos."
     return jira_client.format_search_results(search_data, formato_total=True) 
+
+# Filtra y retorna los tickets en estado 'Escalado'
 async def filtrar_tickets_en_progreso():
     """
     Obtiene solo los tickets en estado 'Escalado'.
@@ -126,6 +135,7 @@ async def filtrar_tickets_en_progreso():
         return "No se encontraron tickets escalados."
     return jira_client.format_search_results(search_data, formato_total=True) 
 
+# Filtra y retorna los tickets en estado 'Esperando soporte'
 async def filtrar_tickets_Esperando_soporte():
     """
     Obtiene solo los tickets en estado 'Esperando soporte'.
@@ -138,6 +148,7 @@ async def filtrar_tickets_Esperando_soporte():
         return "No se encontraron tickets esperando soporte."
     return jira_client.format_search_results(search_data, formato_total=True) 
 
+# Filtra y retorna los tickets en estado 'Esperando por cliente'
 async def filtrar_tickets_Esperando_por_cliente():
     """
     Obtiene solo los tickets en estado 'Esperando por cliente'.
@@ -150,5 +161,34 @@ async def filtrar_tickets_Esperando_por_cliente():
         return "No se encontraron tickets esperando por cliente."
     return jira_client.format_search_results(search_data, formato_total=True) 
 
+# Filtra y retorna los tickets por prioridad específica (del 1 al 5)
+async def filtrar_tickets_por_prioridad(prioridad: str):
+    """
+    Obtiene tickets por una prioridad específica (del 1 al 5), aceptando variantes como 'prioridad 1', 'p1', '1', etc.
+    Si la prioridad no es válida, sugiere los posibles valores aceptados.
+    """
+    sinonimos_prioridad = {
+        "1": ["1", "p1", "prioridad 1", "alta", "muy alta"],
+        "2": ["2", "p2", "prioridad 2"],
+        "3": ["3", "p3", "prioridad 3", "media"],
+        "4": ["4", "p4", "prioridad 4", "baja"],
+        "5": ["5", "p5", "prioridad 5", "muy baja"]
+    }
+    prioridad_normalizada = prioridad.strip().lower()
+    prioridad_real = None
+    for valor, variantes in sinonimos_prioridad.items():
+        if any(var in prioridad_normalizada for var in variantes):
+            prioridad_real = valor
+            break
+    if not prioridad_real:
+        sugerencias = ', '.join([f'Prioridad {k}' for k in sinonimos_prioridad.keys()])
+        return f"Prioridad '{prioridad}' no válida. Usa uno de: {sugerencias}"
+    jql = f'priority = "{prioridad_real}"'
+    search_data = await jira_client.search_issues(jql)
+    if not search_data:
+        return f"No se encontraron tickets con prioridad '{prioridad_real}'."
+    return jira_client.format_search_results(search_data, formato_total=True) 
+
+    
     
     

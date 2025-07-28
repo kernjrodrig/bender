@@ -7,10 +7,10 @@ import httpx
 import os
 import json
 import re
-from jira_tipo_consulta import detect_jira_queries, get_jira_info
-from Jira_chat import router as chat_router
+from Jira.jira_tipo_consulta import detect_jira_queries, get_jira_info
+from Jira.Jira_chat import router as chat_router
 
-# Inicialización de la aplicación FastAPI
+# Inicialización de la aplicación FastAPI.
 app = FastAPI()
 
 @app.on_event("startup")

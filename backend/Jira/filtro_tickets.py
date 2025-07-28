@@ -1,6 +1,6 @@
 #Filtro Tickets.py
 import re
-from jira_client import JiraClient
+from .jira_client import JiraClient
 
 # Instancia global del cliente de Jira para realizar búsquedas
 jira_client = JiraClient()

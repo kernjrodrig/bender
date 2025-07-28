@@ -3,8 +3,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import httpx
 import os
-from jira_tipo_consulta import detect_jira_queries, get_jira_info
-from filtro_tickets import (
+from .jira_tipo_consulta import detect_jira_queries, get_jira_info
+from .filtro_tickets import (
     filtrar_tickets_abiertos,
     filtrar_tickets_por_estado,
     filtrar_tickets_cerrados,

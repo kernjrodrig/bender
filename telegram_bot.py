@@ -5,7 +5,7 @@ import requests  # Para hacer peticiones HTTP al backend
 import os
 
 # Token del bot de Telegram (debería mantenerse privado en producción)
-TOKEN = os.getenv("TELEGRAM_TOKEN", "8247817142:AAHOEktGGi2ipYoBpvMPmx3wbqqLVynEKBc")
+TOKEN = os.getenv("TELEGRAM_TOKEN", "7342077363:AAGuI9fAULbbcY4EFce8nRRkEmbUXy113rc")
 # URL del backend FastAPI al que se enviarán los mensajes
 FASTAPI_URL = os.getenv("FASTAPI_URL", "http://0.0.0.0:8000/chat")
 

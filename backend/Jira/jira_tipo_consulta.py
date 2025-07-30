@@ -1,5 +1,5 @@
 import re
-from jira_client import JiraClient
+from .jira_client import JiraClient
 
 jira_client = JiraClient()
 

@@ -84,7 +84,7 @@ async def chat(request: Request):
                     filtro_resultado = await filtrar_tickets_por_estado(estado)
 
         if filtro_resultado:
-            prompt = f"Consulta del usuario: {mensaje}\n\nResultados de Jira:\n{filtro_resultado}\n\nPor favor, responde de manera útil y clara sobre estos tickets."
+            prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. Consulta del usuario: {mensaje}\n\nResultados de Jira:\n{filtro_resultado}\n\nPor favor, responde de manera útil y clara sobre estos tickets. IMPORTANTE: Responde ÚNICAMENTE en español."
         else:
             # Detectar todas las consultas de Jira
             jira_queries = detect_jira_queries(mensaje)
@@ -105,7 +105,7 @@ async def chat(request: Request):
                     else:
                         ticket_infos.append(issue_data)
                 all_info = "\n\n".join(ticket_infos)
-                resumen_prompt = f"Por favor, haz un resumen general de la siguiente información de tickets de Jira.\n\n{all_info}"
+                resumen_prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. Por favor, haz un resumen general de la siguiente información de tickets de Jira. IMPORTANTE: Responde ÚNICAMENTE en español.\n\n{all_info}"
                 prompt = resumen_prompt
             elif jira_queries:
                 jira_infos = []
@@ -115,17 +115,17 @@ async def chat(request: Request):
                     jira_infos.append(info)
                 jira_info = "\n".join(jira_infos)
                 prompt = f"""
-                Como asistente experto en Jira, analiza la siguiente información y responde de manera útil y clara:
+                Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. Analiza la siguiente información y responde de manera útil y clara:
 
                 Consulta del usuario: {mensaje}
                 
                 Información de Jira obtenida:
                 {jira_info}
                 
-                Por favor, proporciona una respuesta útil basada en esta información. Si hay errores o falta información, explícalo claramente.
+                Por favor, proporciona una respuesta útil basada en esta información. Si hay errores o falta información, explícalo claramente. IMPORTANTE: Responde ÚNICAMENTE en español.
                 """
             else:
-                prompt = mensaje
+                prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. El usuario te pregunta: {mensaje}\n\nIMPORTANTE: Responde ÚNICAMENTE en español."
         
         print(f"DEBUG: Prompt preparado para Ollama: {prompt[:100]}...")
         payload = {

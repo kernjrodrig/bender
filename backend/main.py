@@ -28,9 +28,8 @@ app.add_middleware(
 
 # Configuración de variables de entorno para Ollama
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5a15b4672e26.ngrok-free.app")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://c9a2aad8efae.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
-# Eliminar la inicialización de JiraClient y las funciones detect_jira_queries y get_jira_info
 # Endpoint principal que redirige al nuevo frontend
 @app.get("/", response_class=HTMLResponse)
 async def index():

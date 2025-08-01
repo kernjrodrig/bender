@@ -14,7 +14,7 @@ import re
 
 router = APIRouter()
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5a15b4672e26.ngrok-free.app")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://c9a2aad8efae.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 
 @router.post("/chat")

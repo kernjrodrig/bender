@@ -1,5 +1,6 @@
 import re
 from .jira_client import JiraClient
+from .filtro_tickets import obtener_top_5_asignados
 
 jira_client = JiraClient()
 
@@ -16,6 +17,7 @@ def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
         'changelog': r'(?:historial de cambios|changelog|historial|cambios)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
         'project_of_ticket': r'(?:proyecto|project)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
         'project': r'(?:proyecto|project)\s+([A-Z]+)',
+        'top_assignees': r'(?:top\s*5\s+(?:personas|asignados|usuarios|gente)|5\s+(?:personas|asignados|usuarios|gente)\s+con\s+más\s+tickets|ranking\s+de\s+asignados|mayor\s+cantidad\s+de\s+tickets\s+asignados|top\s+asignados|personas\s+con\s+más\s+tickets)',
         'search': r'(?:buscar|search|encontrar|listar)\s+(.+?)(?:\s+en\s+jira)?$',
         'ticket': r'(?:ticket|issue|jira|tarea|problema)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
         'simple_ticket': r'\b(sd-\d{1,3})\b'
@@ -25,11 +27,16 @@ def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
     for query_type, pattern in patterns.items():
         if query_type != 'simple_ticket':
             for match in re.finditer(pattern, mensaje, re.IGNORECASE):
-                value = match.group(1) if match.group(1) else (match.group(2) if len(match.groups()) > 1 else None)
-                if value:
-                    tickets = re.findall(r'sd-\d{1,3}', value, re.IGNORECASE)
-                    if tickets:
-                        results.append((query_type, tickets))
+                # Para consultas que no requieren tickets específicos (como top_assignees)
+                if query_type in ['top_assignees', 'search']:
+                    results.append((query_type, match.group(0)))
+                else:
+                    # Para consultas que requieren tickets específicos
+                    value = match.group(1) if match.group(1) else (match.group(2) if len(match.groups()) > 1 else None)
+                    if value:
+                        tickets = re.findall(r'sd-\d{1,3}', value, re.IGNORECASE)
+                        if tickets:
+                            results.append((query_type, tickets))
     # Si no se encontró ningún patrón, buscar tickets simples
     if not results:
         simple_matches = re.findall(patterns['simple_ticket'], mensaje, re.IGNORECASE)
@@ -192,6 +199,9 @@ async def get_jira_info(query_type: str, query_value) -> str:
             if project_data:
                 return f"**Proyecto: {project_data.get('name', 'N/A')}**\n- Clave: {project_data.get('key', 'N/A')}\n- Descripción: {project_data.get('description', 'Sin descripción')}"
             return "No se encontró información del proyecto"
+        # Si la consulta es para obtener el top 5 de asignados
+        elif query_type == 'top_assignees':
+            return await obtener_top_5_asignados()
         # Si la consulta es una búsqueda general
         elif query_type == 'search':
             search_data = await jira_client.search_issues(query_value)

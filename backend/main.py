@@ -9,6 +9,7 @@ import json
 import re
 from Jira.jira_tipo_consulta import detect_jira_queries, get_jira_info
 from Jira.Jira_chat import router as chat_router
+from Jira.filtro_tickets import obtener_top_5_asignados
 
 # Inicialización de la aplicación FastAPI.
 app = FastAPI()
@@ -48,6 +49,16 @@ async def list_models():
                 return response.json()
             else:
                 return JSONResponse({"error": "No se pudieron obtener los modelos"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": f"Error: {str(e)}"}, status_code=500)
+
+# Endpoint para obtener las 5 personas con mayor cantidad de tickets asignados
+@app.get("/top-assignees")
+async def get_top_assignees():
+    """Endpoint para obtener las 5 personas con mayor cantidad de tickets asignados"""
+    try:
+        result = await obtener_top_5_asignados()
+        return JSONResponse({"result": result})
     except Exception as e:
         return JSONResponse({"error": f"Error: {str(e)}"}, status_code=500)
 

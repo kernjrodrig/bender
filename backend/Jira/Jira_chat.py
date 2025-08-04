@@ -8,7 +8,8 @@ from .filtro_tickets import (
     filtrar_tickets_abiertos,
     filtrar_tickets_por_estado,
     filtrar_tickets_cerrados,
-    filtrar_tickets_por_prioridad
+    filtrar_tickets_por_prioridad,
+    obtener_top_5_asignados
 )
 import re
 
@@ -70,6 +71,8 @@ async def chat(request: Request):
             filtro_resultado = await filtrar_tickets_abiertos()
         elif re.search(r"tickets?\s+cerrados?", mensaje_lower):
             filtro_resultado = await filtrar_tickets_cerrados()
+        elif re.search(r"top\s*5\s+(?:personas|asignados|usuarios|gente)|5\s+(?:personas|asignados|usuarios|gente)\s+con\s+más\s+tickets|ranking\s+de\s+asignados|mayor\s+cantidad\s+de\s+tickets\s+asignados|top\s+asignados|personas\s+con\s+más\s+tickets", mensaje_lower):
+            filtro_resultado = await obtener_top_5_asignados()
         else:
             # Buscar si el mensaje menciona directamente un estado
             for estado in estados_variantes:
@@ -84,7 +87,13 @@ async def chat(request: Request):
                     filtro_resultado = await filtrar_tickets_por_estado(estado)
 
         if filtro_resultado:
-            prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. Consulta del usuario: {mensaje}\n\nResultados de Jira:\n{filtro_resultado}\n\nPor favor, responde de manera útil y clara sobre estos tickets. IMPORTANTE: Responde ÚNICAMENTE en español."
+            # Detectar si es una consulta de ranking de asignados
+            is_ranking_query = re.search(r"top\s*5\s+(?:personas|asignados|usuarios|gente)|5\s+(?:personas|asignados|usuarios|gente)\s+con\s+más\s+tickets|ranking\s+de\s+asignados|mayor\s+cantidad\s+de\s+tickets\s+asignados|top\s+asignados|personas\s+con\s+más\s+tickets", mensaje_lower)
+            
+            if is_ranking_query:
+                prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. Consulta del usuario: {mensaje}\n\nResultados de Jira:\n{filtro_resultado}\n\nPor favor, presenta esta información de manera clara y útil. Este es un ranking de las personas con más tickets asignados, no una lista de tickets individuales. IMPORTANTE: Responde ÚNICAMENTE en español."
+            else:
+                prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. Consulta del usuario: {mensaje}\n\nResultados de Jira:\n{filtro_resultado}\n\nPor favor, responde de manera útil y clara sobre estos tickets. IMPORTANTE: Responde ÚNICAMENTE en español."
         else:
             # Detectar todas las consultas de Jira
             jira_queries = detect_jira_queries(mensaje)
@@ -149,7 +158,7 @@ async def chat(request: Request):
             if response.status_code != 200:
                 error_msg = f"Error al conectar con Ollama: {response.status_code}"
                 print(f"DEBUG: {error_msg}")
-                return JSONResponse({"error": error_msg}, status_code=500)
+                return JSONResponse({"error": error_msg}, status_code=100)
             response_data = response.json()
             respuesta = response_data.get("message", {}).get("content", "Sin respuesta")
             print(f"DEBUG: Respuesta final: {respuesta[:100]}...")

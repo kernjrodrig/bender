@@ -1,36 +1,48 @@
 import re
 from .jira_client import JiraClient
+from .filtro_tickets import obtener_top_5_asignados
 
 jira_client = JiraClient()
 
 def detect_jira_queries(mensaje: str) -> list[tuple[str, list]]:
     """Detecta todas las consultas de Jira en el mensaje y extrae información relevante (soporta múltiples tipos y tickets)"""
+    
+    # Mejorar los patrones para ser más específicos y evitar conflictos
     patterns = {
-        'ticket': r'(?:ticket|issue|jira|tarea|problema)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
-        'project': r'(?:proyecto|project)\s+([A-Z]+)',
-        'project_of_ticket': r'(?:proyecto|project)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
-        'search': r'(?:buscar|search|encontrar|listar)\s+(.+?)(?:\s+en\s+jira)?$',
+        'creator': r'(?:quien|who)\s+(?:creo|creó|created|creo el ticket|creó el ticket|created the ticket|es el creador|is the creator)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:quien|who)\s+(?:creo|creó|created|es el creador|is the creator)',
         'status': r'(?:estado|status)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:estado|status)',
         'assignee': r'(?:asignado|assignee|asignación)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:asignado|assignee|asignación)',
         'priority': r'(?:prioridad|priority)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:prioridad|priority)',
         'summary': r'(?:resumen|summary|resumir)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:resumen|summary)',
         'changelog': r'(?:historial de cambios|changelog|historial|cambios)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)|((?:sd-\d{1,3}(?:,?\s*)?)+)\s+(?:historial de cambios|changelog)',
+        'project_of_ticket': r'(?:proyecto|project)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
+        'project': r'(?:proyecto|project)\s+([A-Z]+)',
+        'top_assignees': r'(?:top\s*5\s+(?:personas|asignados|usuarios|gente)|5\s+(?:personas|asignados|usuarios|gente)\s+con\s+más\s+tickets|ranking\s+de\s+asignados|mayor\s+cantidad\s+de\s+tickets\s+asignados|top\s+asignados|personas\s+con\s+más\s+tickets)',
+        'search': r'(?:buscar|search|encontrar|listar)\s+(.+?)(?:\s+en\s+jira)?$',
+        'ticket': r'(?:ticket|issue|jira|tarea|problema)\s+((?:sd-\d{1,3}(?:,?\s*)?)+)',
         'simple_ticket': r'\b(sd-\d{1,3})\b'
     }
+    
     results = []
     for query_type, pattern in patterns.items():
         if query_type != 'simple_ticket':
             for match in re.finditer(pattern, mensaje, re.IGNORECASE):
-                value = match.group(1) if match.group(1) else (match.group(2) if len(match.groups()) > 1 else None)
-                if value:
-                    tickets = re.findall(r'sd-\d{1,3}', value, re.IGNORECASE)
-                    if tickets:
-                        results.append((query_type, tickets))
+                # Para consultas que no requieren tickets específicos (como top_assignees)
+                if query_type in ['top_assignees', 'search']:
+                    results.append((query_type, match.group(0)))
+                else:
+                    # Para consultas que requieren tickets específicos
+                    value = match.group(1) if match.group(1) else (match.group(2) if len(match.groups()) > 1 else None)
+                    if value:
+                        tickets = re.findall(r'sd-\d{1,3}', value, re.IGNORECASE)
+                        if tickets:
+                            results.append((query_type, tickets))
     # Si no se encontró ningún patrón, buscar tickets simples
     if not results:
         simple_matches = re.findall(patterns['simple_ticket'], mensaje, re.IGNORECASE)
         if simple_matches:
             results.append(('ticket', simple_matches))
+    
     return results
 
 async def get_jira_info(query_type: str, query_value) -> str:
@@ -38,7 +50,7 @@ async def get_jira_info(query_type: str, query_value) -> str:
     try:
         print(f"DEBUG: get_jira_info iniciado - tipo: {query_type}, valor: {query_value}")
         # Si la consulta es sobre uno o varios tickets
-        if query_type in ['ticket', 'status', 'assignee', 'priority', 'summary', 'changelog', 'project_of_ticket']:
+        if query_type in ['ticket', 'status', 'assignee', 'priority', 'summary', 'changelog', 'project_of_ticket', 'creator']:
             # Si es una lista, procesar cada ticket
             if isinstance(query_value, list):
                 results = []
@@ -106,6 +118,14 @@ async def get_jira_info(query_type: str, query_value) -> str:
                             results.append(f"Ticket {ticket}: Proyecto: {project_name} (clave: {project_key})")
                         else:
                             results.append(f"Ticket {ticket}: No se encontró información del ticket")
+                    elif query_type == 'creator':
+                        issue_data = await jira_client.get_issue(ticket)
+                        if issue_data:
+                            creator = issue_data.get('fields', {}).get('creator', {}).get('displayName', 'N/A')
+                            created_date = issue_data.get('fields', {}).get('created', 'N/A')
+                            results.append(f"Ticket {ticket}: Creado por {creator} el {created_date}")
+                        else:
+                            results.append(f"Ticket {ticket}: No se encontró información del ticket")
                 return '\n'.join(results)
             # Si no es lista, procesar como antes
             else:
@@ -166,12 +186,22 @@ async def get_jira_info(query_type: str, query_value) -> str:
                         project_name = project.get('name', 'N/A')
                         return f"El ticket {ticket} pertenece al proyecto: {project_name} (clave: {project_key})"
                     return f"No se encontró información del ticket {ticket}"
+                elif query_type == 'creator':
+                    issue_data = await jira_client.get_issue(ticket)
+                    if issue_data:
+                        creator = issue_data.get('fields', {}).get('creator', {}).get('displayName', 'N/A')
+                        created_date = issue_data.get('fields', {}).get('created', 'N/A')
+                        return f"**Creador del ticket {ticket}**: {creator} (fecha de creación: {created_date})"
+                    return f"No se encontró información del ticket {ticket}"
         # Si la consulta es sobre un proyecto, obtener información del proyecto
         elif query_type == 'project':
             project_data = await jira_client.get_project(query_value)
             if project_data:
                 return f"**Proyecto: {project_data.get('name', 'N/A')}**\n- Clave: {project_data.get('key', 'N/A')}\n- Descripción: {project_data.get('description', 'Sin descripción')}"
             return "No se encontró información del proyecto"
+        # Si la consulta es para obtener el top 5 de asignados
+        elif query_type == 'top_assignees':
+            return await obtener_top_5_asignados()
         # Si la consulta es una búsqueda general
         elif query_type == 'search':
             search_data = await jira_client.search_issues(query_value)

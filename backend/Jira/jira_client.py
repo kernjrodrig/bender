@@ -15,7 +15,7 @@ class JiraClient:
         Los valores se obtienen de variables de entorno o se usan valores por defecto.
         """
         self.base_url = os.getenv("JIRA_URL", "https://servicedeskguzdan.atlassian.net")
-        self.api_token = os.getenv("JIRA_API_TOKEN", "ATATT3xFfGF0WYvVBIvD0E1vQjLC51Qm1LHbaC6zJLyIqC852CNFb3f4ojMGNCZ7I_fHzaPhKDqqWeI_P1YYWbDYwYFMHNk9G0s6rLlDQrUqmCRpPalxvI4r0xfMG9qd2kMJ38054bKW92WiKwfPjrjBfSig1ctLcihTlbBWaSqSJdx_kCtThZY=5BEA5AC6")
+        self.api_token = os.getenv("JIRA_API_TOKEN", "ATATT3xFfGF0cGD1rgZX_BkY7ON5bvK7lLw80i1ZlzU4b-FB4tKth77CnhZxuQHudu57Von8RN9PeIt04Q0Yo12hbPZ4-idOJabvewZj-DPq9DxOclp6mvKjEu9Lc7RKEQXN-jBYNlQqsCV6eA4WpZxUINkNyiWiHyQ9OeU22bqjAUAenA8hcXU=F855FD4B")
         self.email = os.getenv("JIRA_EMAIL", "javier.rodriguez@guzdan.com")
         
     def _get_headers(self) -> Dict[str, str]:

@@ -110,7 +110,7 @@ async def filtrar_tickets_en_progreso():
     return jira_client.format_search_results(search_data, formato_total=True) 
 
 # Filtra y retorna los tickets en estado 'Atendido'
-async def filtrar_tickets_en_progreso():
+async def filtrar_tickets_atendidos():
     """
     Obtiene solo los tickets en estado 'Atendido'.
     """
@@ -123,7 +123,7 @@ async def filtrar_tickets_en_progreso():
     return jira_client.format_search_results(search_data, formato_total=True) 
 
 # Filtra y retorna los tickets en estado 'Escalado'
-async def filtrar_tickets_en_progreso():
+async def filtrar_tickets_escalados():
     """
     Obtiene solo los tickets en estado 'Escalado'.
     """
@@ -136,7 +136,7 @@ async def filtrar_tickets_en_progreso():
     return jira_client.format_search_results(search_data, formato_total=True) 
 
 # Filtra y retorna los tickets en estado 'Esperando soporte'
-async def filtrar_tickets_Esperando_soporte():
+async def filtrar_tickets_esperando_soporte():
     """
     Obtiene solo los tickets en estado 'Esperando soporte'.
     """
@@ -149,7 +149,7 @@ async def filtrar_tickets_Esperando_soporte():
     return jira_client.format_search_results(search_data, formato_total=True) 
 
 # Filtra y retorna los tickets en estado 'Esperando por cliente'
-async def filtrar_tickets_Esperando_por_cliente():
+async def filtrar_tickets_esperando_por_cliente():
     """
     Obtiene solo los tickets en estado 'Esperando por cliente'.
     """
@@ -188,6 +188,77 @@ async def filtrar_tickets_por_prioridad(prioridad: str):
     if not search_data:
         return f"No se encontraron tickets con prioridad '{prioridad_real}'."
     return jira_client.format_search_results(search_data, formato_total=True) 
+
+async def obtener_top_5_asignados():
+    """
+    Obtiene las 5 personas con mayor cantidad de tickets asignados.
+    Utiliza una consulta JQL para obtener todos los tickets asignados y luego
+    cuenta y ordena por cantidad de tickets por asignado.
+    Retorna un ranking formateado de los top 5 asignados.
+    """
+    try:
+        # Consulta JQL para obtener todos los tickets que tienen asignado
+        # Usamos ORDER BY created DESC para obtener una muestra más representativa
+        # que incluya tickets recientes y evite sesgos por orden alfabético
+        jql = 'assignee IS NOT EMPTY ORDER BY created DESC'
+        search_data = await jira_client.search_issues(jql, max_results=1000)
+        
+        if not search_data:
+            return "No se encontraron tickets asignados. Error: No se pudo obtener datos de Jira."
+        
+        if "issues" not in search_data:
+            return "No se encontraron tickets asignados. Error: Formato de respuesta inesperado de Jira."
+        
+        issues = search_data["issues"]
+        
+        # Si no hay tickets con assignee IS NOT EMPTY, probar con una consulta más amplia
+        if not issues:
+            jql_alt = 'ORDER BY created DESC'
+            search_data_alt = await jira_client.search_issues(jql_alt, max_results=1000)
+            
+            if search_data_alt and "issues" in search_data_alt:
+                issues = search_data_alt["issues"]
+            else:
+                return "No se encontraron tickets en el sistema."
+        
+        # Contar tickets por asignado
+        asignados_count = {}
+        tickets_sin_asignar = 0
+        
+        for issue in issues:
+            fields = issue.get("fields", {})
+            assignee = fields.get("assignee")
+            
+            if assignee:
+                assignee_name = assignee.get("displayName", "Sin nombre")
+                asignados_count[assignee_name] = asignados_count.get(assignee_name, 0) + 1
+            else:
+                tickets_sin_asignar += 1
+        
+        if not asignados_count:
+            return "No se encontraron tickets asignados. Todos los tickets están sin asignar."
+        
+        # Ordenar por cantidad de tickets (descendente) y tomar los top 5
+        sorted_asignados = sorted(asignados_count.items(), key=lambda x: x[1], reverse=True)
+        top_5 = sorted_asignados[:5]
+        
+        # Formatear resultado
+        result = "**Top 5 personas con mayor cantidad de tickets asignados:**\n\n"
+        for i, (assignee_name, count) in enumerate(top_5, 1):
+            result += f"{i}. **{assignee_name}**: {count} tickets\n"
+        
+        # Agregar información adicional
+        total_asignados = len(asignados_count)
+        total_tickets = sum(asignados_count.values())
+        result += f"\n**Resumen:**\n"
+        result += f"- Total de personas con tickets asignados: {total_asignados}\n"
+        result += f"- Total de tickets asignados: {total_tickets}\n"
+        result += f"- Tickets sin asignar: {tickets_sin_asignar}\n"
+        
+        return result
+        
+    except Exception as e:
+        return f"Error obteniendo el ranking de asignados: {str(e)}" 
 
     
     

@@ -9,6 +9,7 @@ import json
 import re
 from Jira.jira_tipo_consulta import detect_jira_queries, get_jira_info
 from Jira.Jira_chat import router as chat_router
+from Jira.filtro_tickets import obtener_top_5_asignados
 
 # Inicialización de la aplicación FastAPI.
 app = FastAPI()
@@ -28,9 +29,8 @@ app.add_middleware(
 
 # Configuración de variables de entorno para Ollama
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "https://5a15b4672e26.ngrok-free.app")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "https://c9a2aad8efae.ngrok-free.app")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
-# Eliminar la inicialización de JiraClient y las funciones detect_jira_queries y get_jira_info
 # Endpoint principal que redirige al nuevo frontend
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -49,6 +49,16 @@ async def list_models():
                 return response.json()
             else:
                 return JSONResponse({"error": "No se pudieron obtener los modelos"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": f"Error: {str(e)}"}, status_code=500)
+
+# Endpoint para obtener las 5 personas con mayor cantidad de tickets asignados
+@app.get("/top-assignees")
+async def get_top_assignees():
+    """Endpoint para obtener las 5 personas con mayor cantidad de tickets asignados"""
+    try:
+        result = await obtener_top_5_asignados()
+        return JSONResponse({"result": result})
     except Exception as e:
         return JSONResponse({"error": f"Error: {str(e)}"}, status_code=500)
 

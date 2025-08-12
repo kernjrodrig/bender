@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  bender-ia:
+    build: ./backend
+    container_name: bender-ia
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://192.168.10.80:8089
+      - MODEL_NAME=meta-llama-3-8b-instruct
+      - FRONTEND_URL=http://localhost:5173
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s

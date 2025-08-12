@@ -42,8 +42,15 @@ fi
 # Iniciar el bot de Telegram solo si está habilitado
 if [ "${ENABLE_TELEGRAM_BOT}" = "true" ]; then
     echo "🤖 Iniciando bot de Telegram..."
+    # Verificar si ya hay un proceso del bot ejecutándose
+    if pgrep -f "telegram_bot.py" > /dev/null; then
+        echo "⚠️  Bot de Telegram ya está ejecutándose, terminando proceso anterior..."
+        pkill -f "telegram_bot.py"
+        sleep 2
+    fi
     python telegram_bot.py &
     TELEGRAM_BOT_PID=$!
+    echo "✅ Bot de Telegram iniciado con PID: $TELEGRAM_BOT_PID"
 else
     echo "🤖 Bot de Telegram desactivado por configuración (ENABLE_TELEGRAM_BOT != true)"
     TELEGRAM_BOT_PID=""

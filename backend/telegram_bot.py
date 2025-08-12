@@ -45,15 +45,33 @@ def main():
     print(f"   - TOKEN: {TOKEN[:10]}...")
     print(f"   - FASTAPI_URL: {FASTAPI_URL}")
     
-    app = ApplicationBuilder().token(TOKEN).build()  # Crea la aplicación del bot con el token
+    try:
+        app = ApplicationBuilder().token(TOKEN).build()  # Crea la aplicación del bot con el token
 
-    # Añade el handler para el comando /start
-    app.add_handler(CommandHandler("start", start))
-    # Añade el handler para mensajes de texto que no sean comandos
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        # Añade el handler para el comando /start
+        app.add_handler(CommandHandler("start", start))
+        # Añade el handler para mensajes de texto que no sean comandos
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("✅ Bot corriendo...")  # Mensaje en consola para indicar que el bot está activo
-    app.run_polling()  # Inicia el polling para recibir mensajes
+        print("✅ Bot corriendo...")  # Mensaje en consola para indicar que el bot está activo
+        
+        # Configurar manejo de errores
+        app.add_error_handler(error_handler)
+        
+        app.run_polling(
+            allowed_updates=["message", "callback_query"],
+            drop_pending_updates=True,  # Evitar conflictos con instancias anteriores
+            close_loop=False
+        )  # Inicia el polling para recibir mensajes
+    except Exception as e:
+        print(f"❌ Error al iniciar el bot: {e}")
+        raise
+
+async def error_handler(update, context):
+    """Maneja errores del bot"""
+    print(f"❌ Error en el bot: {context.error}")
+    if update and update.effective_message:
+        await update.effective_message.reply_text("Lo siento, ocurrió un error. Inténtalo de nuevo.")
 
 # Punto de entrada del script
 if __name__ == "__main__":

@@ -15,8 +15,8 @@ import re
 
 router = APIRouter()
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "https://c9a2aad8efae.ngrok-free.app")
-MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://192.168.10.80:8089")
+MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama-3-8b-instruct")
 
 @router.post("/chat")
 async def chat(request: Request):
@@ -136,8 +136,9 @@ async def chat(request: Request):
             else:
                 prompt = f"Eres un asistente experto en Jira llamado Bender que SIEMPRE responde en español. El usuario te pregunta: {mensaje}\n\nIMPORTANTE: Responde ÚNICAMENTE en español."
         
-        print(f"DEBUG: Prompt preparado para Ollama: {prompt[:100]}...")
-        payload = {
+        print(f"DEBUG: Prompt preparado para LMStudio: {prompt[:100]}...")
+        # LMStudio usa la API de OpenAI, no la de Ollama
+        lmstudio_payload = {
             "model": MODEL_NAME,
             "messages": [
                 {
@@ -145,26 +146,29 @@ async def chat(request: Request):
                     "content": prompt
                 }
             ],
+            "max_tokens": 1000,
+            "temperature": 0.7,
             "stream": False
         }
-        print(f"DEBUG: Conectando a Ollama en {OLLAMA_URL}")
+        print(f"DEBUG: Conectando a LMStudio en {OLLAMA_URL}")
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{OLLAMA_URL}/api/chat",
-                json=payload,
-                timeout=300.0
+                f"{OLLAMA_URL}/v1/chat/completions",
+                json=lmstudio_payload,
+                timeout=120.0
             )
-            print(f"DEBUG: Respuesta de Ollama - Status: {response.status_code}")
+            print(f"DEBUG: Respuesta de LMStudio - Status: {response.status_code}")
             if response.status_code != 200:
-                error_msg = f"Error al conectar con Ollama: {response.status_code}"
+                error_msg = f"Error al conectar con LMStudio: {response.status_code}"
                 print(f"DEBUG: {error_msg}")
                 return JSONResponse({"error": error_msg}, status_code=100)
             response_data = response.json()
-            respuesta = response_data.get("message", {}).get("content", "Sin respuesta")
+            # LMStudio devuelve la respuesta en formato OpenAI
+            respuesta = response_data.get("choices", [{}])[0].get("message", {}).get("content", "Sin respuesta")
             print(f"DEBUG: Respuesta final: {respuesta[:100]}...")
             return {"respuesta": respuesta}
     except httpx.TimeoutException as e:
-        error_msg = f"Timeout: Ollama tardó más de 5 minutos en responder: {str(e)}"
+        error_msg = f"Timeout: LMStudio tardó más de 5 minutos en responder: {str(e)}"
         print(f"DEBUG: {error_msg}")
         return JSONResponse({"error": error_msg}, status_code=500)
     except Exception as e:

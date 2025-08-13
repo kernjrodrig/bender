@@ -99,7 +99,7 @@ async def test_lmstudio():
                     "message": "Conexión exitosa con LMStudio",
                     "url": OLLAMA_URL,
                     "model": MODEL_NAME,
-                    "test_response": response_data.get("message", {}).get("content", "Sin respuesta")[:100],
+                    "test_response": response_data.get("choices", [{}])[0].get("message", {}).get("content", "Sin respuesta")[:100],
                     "note": "LMStudio está funcionando correctamente"
                 })
             else:
@@ -114,6 +114,51 @@ async def test_lmstudio():
             "status": "error",
             "message": f"Error de conexión: {str(e)}",
             "url": OLLAMA_URL
+        }, status_code=500)
+
+# Nuevo endpoint para hacer ping a la URL de Ollama
+@app.get("/ping-ollama")
+async def ping_ollama():
+    """Hace ping a la URL de Ollama para verificar la conectividad de red"""
+    try:
+        from urllib.parse import urlparse
+        import asyncio
+
+        parsed_url = urlparse(OLLAMA_URL)
+        hostname = parsed_url.hostname
+
+        if not hostname:
+            return JSONResponse({
+                "status": "error",
+                "message": "No se pudo extraer el hostname de OLLAMA_URL",
+                "url": OLLAMA_URL
+            }, status_code=400)
+
+        process = await asyncio.create_subprocess_shell(
+            f"ping -c 4 {hostname}",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode == 0:
+            return JSONResponse({
+                "status": "success",
+                "hostname": hostname,
+                "output": stdout.decode()
+            })
+        else:
+            return JSONResponse({
+                "status": "error",
+                "hostname": hostname,
+                "error": stderr.decode(),
+                "output": stdout.decode()
+            }, status_code=500)
+
+    except Exception as e:
+        return JSONResponse({
+            "status": "error",
+            "message": f"Error inesperado al hacer ping: {str(e)}"
         }, status_code=500)
 
 # Endpoint para Open WebUI (formato OpenAI API)

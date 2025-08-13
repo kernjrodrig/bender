@@ -12,10 +12,10 @@ FASTAPI_URL = os.getenv("FASTAPI_URL", "http://0.0.0.0:8000/chat")
 # Handler para el comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
-        # Responde con un mensaje de bienvenida y ejemplo de uso
+        # Responde con un mensaje de bienvenida y ejemplo de uso..
         await update.message.reply_text("¡Hola! Mándame un mensaje con un ticket Jira, por ejemplo: estado SD-497")
 
-# Handler para mensajes de texto que no son comandos
+# Handler para mensajes de texto que no son comandos...
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return  # Si no hay mensaje, no hace nada

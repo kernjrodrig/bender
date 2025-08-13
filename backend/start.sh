@@ -58,7 +58,7 @@ fi
 
 # Iniciar la aplicación con uvicorn
 echo "🎯 Iniciando servidor uvicorn..."
-exec uvicorn main:app \
+uvicorn main:app \
     --host 0.0.0.0 \
     --port 8000 \
     --workers 1 \
@@ -68,5 +68,9 @@ exec uvicorn main:app \
     --use-colors &
 UVICORN_PID=$!
 
-# Esperar a que cualquiera de los procesos termine
-wait $UVICORN_PID $TELEGRAM_BOT_PID 
+# Esperar a que los procesos en segundo plano terminen
+if [ -n "$TELEGRAM_BOT_PID" ]; then
+    wait -n $UVICORN_PID $TELEGRAM_BOT_PID
+else
+    wait $UVICORN_PID
+fi
